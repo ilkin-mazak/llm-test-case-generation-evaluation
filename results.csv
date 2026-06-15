@@ -1,0 +1,5 @@
+Model,Target Class,Prompt Strategy,Iterations Needed,Final Status,Execution Logs/Errors
+qwen2.5-coder:14b,CharUtils,Zero-Shot,Failed after max retries,FAIL,AI Hallucination: Generated text instead of code.
+qwen2.5-coder:14b,CharUtils,Template-Driven,0,PASS,Build Successful
+qwen2.5-coder:14b,DateUtils,Zero-Shot,Failed after max retries,FAIL,AI Hallucination: Generated text instead of code.
+qwen2.5-coder:14b,DateUtils,Template-Driven,2,PASS,Build Successful
