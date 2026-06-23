@@ -4,6 +4,8 @@ import pandas as pd
 import ollama
 import re
 import glob
+import datetime
+import shutil
 
 # --- Configuration ---
 MODELS = ["qwen2.5-coder:14b"]
@@ -18,6 +20,11 @@ TARGET_CLASSES = {
         "source": "src/main/java/org/apache/commons/lang3/time/DateUtils.java",
         "test_path": "src/test/java/org/apache/commons/lang3/time/LlmGeneratedDateUtilsTest.java",
         "package": "org.apache.commons.lang3.time"
+    },
+    "ReflectionToStringBuilder": {
+        "source": "src/main/java/org/apache/commons/lang3/builder/ReflectionToStringBuilder.java",
+        "test_path": "src/test/java/org/apache/commons/lang3/builder/LlmGeneratedReflectionToStringBuilderTest.java",
+        "package": "org.apache.commons.lang3.builder"
     }
 }
 
@@ -35,10 +42,12 @@ You are an expert Java developer. Based on the <source_code> above, write a comp
 You MUST follow these rules absolutely:
 1. Output ONLY raw, valid Java code wrapped in ```java ... ```.
 2. Use this exact skeleton. Do not change the class name.
-3. Do NOT add any explanations or conversational text.
-4. TYPE RULES: Handle boundary values properly by explicitly casting primitives (e.g., `(char) 128`).
+3. EXHAUSTIVE COVERAGE: You MUST generate at least one @Test method for EVERY public method present in the <source_code>.
+4. EDGE CASES: You MUST include specific assertions for null inputs, negative values, and boundary limits.
+5. TYPE RULES: Handle boundary values properly by explicitly casting primitives (e.g., `(char) 128`).
+6. Do NOT add any explanations or conversational text.
 
-````java
+```java
 package {PACKAGE_NAME};
 
 import org.junit.jupiter.api.Test;
@@ -62,6 +71,11 @@ Ensure you are using ONLY JUnit 5 imports (org.junit.jupiter.api)."""
 }
 
 results = []
+
+# --- Output Directory Setup ---
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+output_dir = os.path.expanduser(f"~/Desktop/LLM_Thesis_Run_{timestamp}")
+os.makedirs(output_dir, exist_ok=True)
 
 
 def cleanup_old_tests():
@@ -117,6 +131,7 @@ def run_maven_test(test_class_name):
 
 # --- Main Execution Loop ---
 print("Starting Automated Generation & Evaluation Pipeline...")
+print(f"Artifacts will be saved to: {output_dir}")
 
 for class_name, meta in TARGET_CLASSES.items():
     if not os.path.exists(meta['source']):
@@ -175,6 +190,12 @@ for class_name, meta in TARGET_CLASSES.items():
                     logs = str(e)
                     break
 
+            # --- Save the Artifact to Desktop ---
+            if os.path.exists(meta['test_path']):
+                safe_strategy = strategy.replace(" ", "_").replace("-", "_")
+                dest_filename = f"{class_name}_{safe_strategy}_Final.java"
+                shutil.copy(meta['test_path'], os.path.join(output_dir, dest_filename))
+
             results.append({
                 "Model": model,
                 "Target Class": class_name,
@@ -184,8 +205,11 @@ for class_name, meta in TARGET_CLASSES.items():
                 "Execution Logs/Errors": logs
             })
 
+# --- Finalize CSV ---
+csv_path = os.path.join(output_dir, "results.csv")
 df = pd.DataFrame(results)
-df.to_csv("results.csv", index=False)
+df.to_csv(csv_path, index=False)
+
 print("\n==============================================")
-print("Experiment Complete! Results saved to results.csv")
+print(f"Experiment Complete! Results and Java files saved to:\n{output_dir}")
 print("==============================================")
